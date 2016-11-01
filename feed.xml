@@ -17,7 +17,8 @@
     <author>
       <name>Javier Cordero Martínez</name>
     </author>
-    <content type="html">&lt;p&gt;This is an example blog post.  Not much here but that's not the point :)&lt;/p&gt;
+    <content type="html">&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;hello world&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 </content>
   </entry>
 </feed>
