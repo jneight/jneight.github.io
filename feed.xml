@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title type="text">jneight -- dev thoughts</title>
   <id>urn:uuid:c76ef0de-395d-352c-92a3-9df539a6a972</id>
-  <updated>2016-11-01T00:00:00Z</updated>
+  <updated>2016-11-02T09:31:10.284955Z</updated>
   <link href="http://www.corderomartinez.es/blog/" />
   <link href="http://www.corderomartinez.es/feed.xml" rel="self" />
   <author>
@@ -18,6 +18,50 @@
       <name>Javier Cordero Martínez</name>
     </author>
     <content type="html">&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;hello world&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+</content>
+  </entry>
+  <entry xml:base="http://www.corderomartinez.es/blog/metaclases-de-python/">
+    <title type="text">Data model: metaclases de Python</title>
+    <id>urn:uuid:adf880fb-5495-37e0-9872-4a01e9d484e9</id>
+    <updated>2016-11-02T09:31:10.284955Z</updated>
+    <link href="http://www.corderomartinez.es/blog/metaclases-de-python/" />
+    <author>
+      <name>Javier Cordero Martínez</name>
+    </author>
+    <content type="html">&lt;p&gt;Posiblemente las metaclases sean un concepto algo confuso a la hora de intentar comprender como funciona el modelo de datos propio de Python, resumiendo, &lt;em&gt;una metaclase es una clase encargada de crear otra clase en memoria&lt;/em&gt;, podemos simplificar esto, considerando a una metaclase como una factoría que crea nuevas clases que posteriormente serán instanciadas en objetos:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/metaclases-de-python/01.png&quot; alt=&quot;Image&quot;&gt;&lt;/p&gt;
+&lt;h3&gt;Vistazo rápido al modelo de datos&lt;/h3&gt;
+&lt;p&gt;Para comprender la utilidad de las metaclases, creo que es necesario tener claro como se representan los datos en Python (&lt;a href=&quot;https://docs.python.org/3.7/reference/datamodel.html&quot;&gt;más información en la documentación de referencia del lenguaje&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Un concepto inicial a tener en cuenta es que todo en Python son objetos, los objetos son la abstracción de datos empleada en el lenguaje, en resumen, todos los datos de nuestro programa estarán representados por objetos y las relaciones entre ellos, por tanto, las clases son objetos.&lt;/p&gt;
+&lt;p&gt;Cada objeto está formado por &lt;em&gt;identity&lt;/em&gt;, &lt;em&gt;type&lt;/em&gt; y &lt;em&gt;value&lt;/em&gt;:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Foobar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;     &lt;span class=&quot;k&quot;&gt;pass&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;identity&lt;/strong&gt;, es inmutable una vez un objeto ha sido creado, podemos acceder a este valor por medio de la función &lt;em&gt;id()&lt;/em&gt; y el operador &lt;em&gt;is&lt;/em&gt; lo que hace es comparar la identidad de dos objetos. El valor que puede tomar la identidad dependerá de la implementación de Python que estemos usando, en el caso de CPython, corresponde a la dirección de memoria donde está el objeto.&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Foobar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;mi&quot;&gt;139809539258464&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;type&lt;/strong&gt;, define que operaciones y que posibles valores puede tener el objeto, para conocerlo podemos usar la función &lt;em&gt;type()&lt;/em&gt; que devuelve el tipo del objeto (siendo este otro objeto),  conociendo las operaciones que soporta una clase, el interprete evita hacer operaciones que deriven en un comportamiento desconocido  &lt;em&gt;(por lo que podemos considerar que Python es type safe)&lt;/em&gt;, en este caso, type es mutable, aunque es una practica no recomendada y deberíamos evitarlo.&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;__main__&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;FooClass&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;value&lt;/strong&gt;, el valor de la instancia creada, podemos considerar dos tipos:&lt;ul&gt;
+&lt;li&gt;mutable, en caso de que pueda cambiar.&lt;/li&gt;
+&lt;li&gt;inmutable, en caso de que el valor no pueda cambiar una vez fuera creada la instancia. Es importante conocer que un contenedor inmutable que contiene objetos mutables, puede cambiarse el valor de los objetos que contiene, pero el contenedor seguirá considerándose inmutable porque la colección de objetos sigue igual.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Empezando a usar metaclases&lt;/h3&gt;
+&lt;p&gt;En el ejemplo anterior hemos creado una clase y una instancia de la misma, como ya dijimos, las metaclases son las encargadas de crear las nuevas clases, entonces, ¿qué metaclase ha creado &lt;em&gt;Foobar&lt;/em&gt;?, por defecto, Python utilizará &lt;em&gt;type&lt;/em&gt;, las clases son objetos, por lo que podemos ver la clase de la clase con &lt;em&gt;isinstance&lt;/em&gt; o con el atributo &lt;em&gt;&lt;code&gt;__class__&lt;/code&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;isinstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Foobar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; 
+&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;isinstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Foobar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Foobar&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;__class__&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;&amp;gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 </content>
   </entry>

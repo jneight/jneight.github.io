@@ -6,7 +6,7 @@
 <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
 <link rel="stylesheet" href="/static/pygments.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<title>blog — dev thoughts</title>
+<title>Data model: metaclases de Python — dev thoughts</title>
 <style>
 body { padding-top: 70px; }
 </style>
@@ -38,21 +38,20 @@ body { padding-top: 70px; }
               <div class="page">
                 
   
-    
   <div class="blog-post">
   
-    <h2><a href="/blog/2016/11/metaclases-de-python/">Data model: metaclases de Python</a></h2>
+    <h2>Data model: metaclases de Python</h2>
   
   <p class="meta">
     written by
     
       Javier Cordero Martínez
     
-    on 2016-11-02
+    on 
   </p>
   <p><em>En el primer articulo de este blog, intentaré explicar las notas y distintos artículos o documentación de referencia que he ido necesitando para comprender el funcionamiento de las metaclases y como se construyen las clases en Python</em></p>
 <p>Posiblemente las metaclases sean un concepto algo confuso a la hora de intentar comprender como funciona el modelo de datos propio de Python, resumiendo, <em>una metaclase es una clase encargada de crear otra clase en memoria</em>, podemos simplificar esto, considerando a una metaclase como una factoría que crea nuevas clases que posteriormente serán instanciadas en objetos, una clase cuyas instancias son a su vez clases, será una metaclase:</p>
-<p><img src="/blog/2016/11/metaclases-de-python/01.png" alt="Image"></p>
+<p><img src="/blog/metaclases-de-python/01.png" alt="Image"></p>
 <h3>Vistazo rápido al modelo de datos</h3>
 <p>Para comprender la utilidad de las metaclases, creo que es necesario tener claro como se representan los datos en Python (más información en la documentación de referencia del lenguaje<sup class="footnote-ref" id="fnref-1"><a href="#fn-1" rel="footnote">1</a></sup>.</p>
 <p>Un concepto inicial a tener en cuenta es que todo en Python son objetos, los objetos son la abstracción de datos empleada en el lenguaje, en resumen, todos los datos de nuestro programa estarán representados por objetos y las relaciones entre ellos, por tanto, las clases son objetos.</p>
@@ -90,7 +89,7 @@ body { padding-top: 70px; }
 <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">type</span><span class="s1">&#39;&gt;</span>
 </pre></div>
 <p>Como podemos intuir y parece lógico al ser también objetos, todas las clases de Python tienen como clase a <em>type</em>, por tanto, todos las instancias que creemos de estas clases, también son objetos de la clase <em>type</em>, que sera la metaclase por defecto.</p>
-<p><img src="/blog/2016/11/metaclases-de-python/02.png" alt="Image"></p>
+<p><img src="/blog/metaclases-de-python/02.png" alt="Image"></p>
 <p>Como nota, <em>type</em> tiene como constructores <code>type(object)</code> y <code>type(name, bases, dict)</code>, ambos funciones <em>built-in</em><sup class="footnote-ref" id="fnref-2"><a href="#fn-2" rel="footnote">2</a></sup> que podemos usar para obtener el tipo de un objeto y para crear clases en tiempo de ejecución:</p>
 <div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="nb">type</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
 <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">type</span><span class="s1">&#39;&gt;</span>
@@ -212,7 +211,7 @@ body { padding-top: 70px; }
 <div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CustomMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">metacls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
         <span class="k">print</span><span class="p">(</span><span class="s1">&#39;{0}.__new__ with name {1} bases {2} attrs {3}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">metacls</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">bases</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">attrs</span><span class="p">)))</span>
-        <span class="n">new_klass</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">metacls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>  <span class="c1"># now the class object is created</span>
+        <span class="n">new_klass</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">metacls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="k">print</span><span class="p">(</span><span class="s1">&#39;{0} with methods {1}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">new_klass</span><span class="p">)),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">dir</span><span class="p">(</span><span class="n">new_klass</span><span class="p">))))</span> 
         <span class="k">return</span> <span class="n">new_klass</span>
 
@@ -229,12 +228,10 @@ body { padding-top: 70px; }
 <p>Llamado después de <code>__new__</code>, es decir, cuando el objeto ya fue creado, pero antes de ser devuelto por <code>__call__</code>, los parámetros que recibe son los usados en la llamada del constructor y su función es inicializar los atributos que tendra el objeto (recordemos que una clase es también un objeto), como se ve en los ejemplos anteriores.</p>
 <h2>Notas finales</h2>
 <p>He intentado resumir la creación de clases en Python, para tener una visión mas detallada recomiendo ver:</p>
-<ul>
-<li>Charla de metaprogramación de Python 3 por David Beazley en la PyCon 2013: <a href="https://www.youtube.com/watch?v=sPiWg5jSoZI">https://www.youtube.com/watch?v=sPiWg5jSoZI</a></li>
-<li>Genial articulo de Ionel Cristian Mărieș muy detallado y con mas referencias utiles: <a href="https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/">https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/</a></li>
-<li>Documentación de referencia del modelo de datos de Python: <a href="https://docs.python.org/3.7/reference/datamodel.html">https://docs.python.org/3.7/reference/datamodel.html</a></li>
-<li>Documentación de referencia sobre la estructura de una clase a nivel de C: <a href="https://docs.python.org/3/c-api/typeobj.html">https://docs.python.org/3/c-api/typeobj.html</a></li>
-</ul>
+<p>Charla de metaprogramación de Python 3 por David Beazley en la PyCon 2013: <a href="https://www.youtube.com/watch?v=sPiWg5jSoZI">https://www.youtube.com/watch?v=sPiWg5jSoZI</a>
+Genial articulo de Ionel Cristian Mărieș muy detallado y con mas referencias utiles: <a href="https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/">https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/</a>
+Documentación de referencia del modelo de datos de Python: <a href="https://docs.python.org/3.7/reference/datamodel.html">https://docs.python.org/3.7/reference/datamodel.html</a>
+Documentación de referencia sobre la estructura de una clase a nivel de C: <a href="https://docs.python.org/3/c-api/typeobj.html">https://docs.python.org/3/c-api/typeobj.html</a></p>
 <div class="footnotes">
 <hr>
 <ol><li id="fn-1"><p><a href="https://docs.python.org/3.7/reference/datamodel.html">https://docs.python.org/3.7/reference/datamodel.html</a><a href="#fnref-1" rev="footnote">&#8617;</a></p></li>
@@ -249,38 +246,6 @@ body { padding-top: 70px; }
 </ol>
 </div>
 
-  </div>
-
-  
-    
-  <div class="blog-post">
-  
-    <h2><a href="/blog/2016/11/first-post/">Hello Website</a></h2>
-  
-  <p class="meta">
-    written by
-    
-      Javier Cordero Martínez
-    
-    on 2016-11-01
-  </p>
-  <div class="highlight"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;hello world&#39;</span><span class="p">)</span>
-</pre></div>
-<p>Bienvenido a mi blog en el que trataré de explicar y resumir lo que vaya aprendiendo, espero que te sea de utilidad como lo es para mí :)</p>
-
-  </div>
-
-  
-
-  
-  <div class="pagination">
-    
-      <span class="disabled">&laquo; Previous</span>
-    
-    | 1 |
-    
-      <span class="disabled">Next &raquo;</span>
-    
   </div>
 
 
