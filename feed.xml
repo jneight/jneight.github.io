@@ -202,6 +202,7 @@
 &lt;li&gt;Documentación de referencia del modelo de datos de Python: &lt;a href=&quot;https://docs.python.org/3.7/reference/datamodel.html&quot;&gt;https://docs.python.org/3.7/reference/datamodel.html&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;Documentación de referencia sobre la estructura de una clase a nivel de C: &lt;a href=&quot;https://docs.python.org/3/c-api/typeobj.html&quot;&gt;https://docs.python.org/3/c-api/typeobj.html&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
+&lt;p&gt;Tengo un pequeño ejemplo que hace uso de una metaclase muy simple para crear automáticamente un modelo que sirve de historico de cambios de otro modelo en Django, integrándose con el sistema de migraciones, tiene ya algún tiempo y no esta terminado, fue para una prueba técnica de un contrato probado con Django 1.8, disponible en &lt;a href=&quot;https://github.com/jneight/django-changelog-models&quot;&gt;https://github.com/jneight/django-changelog-models&lt;/a&gt;&lt;/p&gt;
 &lt;div class=&quot;footnotes&quot;&gt;
 &lt;hr&gt;
 &lt;ol&gt;&lt;li id=&quot;fn-1&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://docs.python.org/3.7/reference/datamodel.html&quot;&gt;https://docs.python.org/3.7/reference/datamodel.html&lt;/a&gt;&lt;a href=&quot;#fnref-1&quot; rev=&quot;footnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
