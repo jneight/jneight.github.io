@@ -1,0 +1,278 @@
+<!doctype html>
+<meta charset="utf-8">
+
+<link type="application/atom+xml" rel="alternate" href="/feed.xml"/>
+<link href="//maxcdn.bootstrapcdn.com/bootswatch/3.3.7/readable/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+<link rel="stylesheet" href="/static/pygments.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<title>Performance: Improving memory needs and dict lookup time with string interning — dev thoughts</title>
+<style>
+body { padding-top: 70px; }
+</style>
+<body>
+    <nav class="navbar navbar-fixed-top navbar-default topnav" role="navigation">
+        <div class="container topnav">
+            <div class="navbar-header">
+                <button type="button" data-target="navbarCollapse" data-toggle="collapse" class="navbar-toggle">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/"><b>dev thoughts</b></a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="/">About me</a></li>
+                    
+                      <li class="active"><a href="/blog/">Blog</a></li>
+                    
+                  </ul>
+            </div>
+        </div>
+    </nav>
+  <div class="container content">
+      <div class="row">
+          <div class="col-sm-12">
+              <div class="page">
+                
+  
+  <div class="blog-post">
+  
+    <h2>Performance: Improving memory needs and dict lookup time with string interning</h2>
+  
+  <p class="meta">
+    written by
+    
+      Javier Cordero Martinez
+    
+    on 
+  </p>
+  <p>In this article I will talk about the method called string interning and how it can help us to reduce the memory consumed when we need to handle a big amount of strings with a lot of repeated sentences, this technique will improve our search when dealing with a big dictionary too.</p>
+<p>The last time I needed to use this technique,  we needed to build a new dictionary mixing data from two different dictionaries, each one with results from different NLP analyses, a sentiment analysis and a category analysis, both dictionaries can be of any size, with a lot of sentences, categories and terms duplicated, so to build the final dictionary a lot of lookups and string comparations needed to be done.</p>
+<h3>What is string interning?</h3>
+<p>String interning<sup class="footnote-ref" id="fnref-1"><a href="#fn-1" rel="footnote">1</a></sup> is just a method used to allow storing only one copy of each string used, with this method we will be able to do some string processing faster and needing less space, in Python, this is possible because strings are immutable. It is also available in Java, Ruby, .NET and others.</p>
+<p>When string interning is used, the interpreter builds a table where each string interned has a pointer, this way, when we are using a duplicated string assigned to two variables and intern it, we are just using two variables pointing to the same table row. String interning is massively used at Python internals for names, keys for dictionaries that hold module, class and instance attributes, etc.</p>
+<p>It is important to know that we are going to handle strings as always, all the stuff is magically handled by the interpreter.</p>
+<p><strong>The improvement in dictionary lookup is achieved because instead of doing a string compare after hashing, only a pointer compare will be done, the same applies to most of string operations, some examples will be added later.</strong></p>
+<h4>Using <code>intern()</code></h4>
+<h5>Python 2</h5>
+<p>We can enable string interning with the built-in function <code>intern</code>, one pitfall of Python 2, is that only ASCII strings are supported, so Unicode strings cannot be interned.</p>
+<div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="nb">intern</span><span class="p">(</span><span class="s1">&#39;this text will use string interning using built-in&#39;</span><span class="p">)</span>
+</pre></div>
+<h5>Python 3</h5>
+<p>In this version, <code>intern</code> built-in has been removed and is now at <code>sys</code> module, <code>sys.intern()</code><sup class="footnote-ref" id="fnref-2"><a href="#fn-2" rel="footnote">2</a></sup>. In this case, Unicode strings are supported.</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="s1">&#39;this text will use string interning using sys&#39;</span><span class="p">)</span>
+</pre></div>
+<p><br /></p>
+<p>I will use Python 3 but it will work with Python 2 too. In this example we will see that two variables with the same string are different (<code>is</code> expression check if two variables are the same object) after calling intern, the strings <em>a</em> and <em>b</em> become the same pointer</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="s1">&#39;this string is foo&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">=</span> <span class="s1">&#39;this string is foo&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="ow">is</span> <span class="n">b</span>  <span class="c1"># different objects</span>
+<span class="bp">False</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span>  <span class="c1"># with same content</span>
+<span class="bp">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">sys</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>  <span class="c1"># after intern(), string operations work the same</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span>
+<span class="bp">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="ow">is</span> <span class="n">b</span>
+<span class="bp">False</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="ow">is</span> <span class="n">b</span>  <span class="c1"># both strings have been interned, the vars now have the same pointer</span>
+<span class="bp">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span>
+<span class="bp">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span>  <span class="c1"># text is still returned, like always</span>
+<span class="s1">&#39;this string is foo&#39;</span>
+</pre></div>
+<p>As we can think, some operations, like string compare will be faster because the pointers will be compared instead of looking to each character, so we can spend a minimal amount of time calling intern() for better gains later.</p>
+<p><strong>Interned strings can be garbaged collected if no reference if kept of the return value from <code>sys.intern()</code>, it is important to save it.</strong></p>
+<h4>Internal details of Python implementation</h4>
+<p>Obviously, string interning is possible in each Python implementation, but there are some implementation behavior that will be good to know, I will talk about CPython (because it is the only one I'm using), small strings will be automatically interned, but only when they are compile-time constants:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">sys</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="s1">&#39;example&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="s1">&#39;s&#39;</span>  <span class="c1"># an expression instead of a constant</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="ow">is</span> <span class="s1">&#39;example&#39;</span>  <span class="c1"># a is a compile-time constant, is already interned</span>
+<span class="bp">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="ow">is</span> <span class="s1">&#39;examples&#39;</span>  <span class="c1"># b isn&#39;t a compile-time constant, is not interned automatically</span>
+<span class="bp">False</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">==</span> <span class="s1">&#39;examples&#39;</span>
+<span class="bp">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="ow">is</span> <span class="s1">&#39;examples&#39;</span>
+<span class="bp">True</span>
+</pre></div>
+<h3>Memory measure</h3>
+<p>I will use <strong>Pympler</strong><sup class="footnote-ref" id="fnref-3"><a href="#fn-3" rel="footnote">3</a></sup>, a very easy to use memory measure tool compatible with Python 3, in this example, two dictionaries will be created, both with the same number of keys, and the same strings repeated, but one will be using interned strings.</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">sys</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pympler</span> <span class="kn">import</span> <span class="n">asizeof</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">not_interned</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">):</span><span class="s1">&#39;a&#39;</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">%</span><span class="mi">50</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">)}</span>  <span class="c1"># a dict with 1000 keys and 20 repeated strings as value</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">not_interned_size</span> <span class="o">=</span> <span class="n">asizeof</span><span class="o">.</span><span class="n">asized</span><span class="p">(</span><span class="n">not_interned</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">()</span>  <span class="c1"># memory consumed by dictionary a in bytes</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">not_interned_size</span><span class="o">.</span><span class="n">format</span><span class="p">()</span>
+<span class="s2">&quot;{&#39;29&#39;: &#39;aaaaaaaaaaaaaaaaaaaaaaaaaaaaa&#39;....1&#39;: &#39;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&#39;} size=180240 flat=49248&quot;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interned</span> <span class="o">=</span>  <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">):</span><span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">%</span><span class="mi">50</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">)}</span>  <span class="c1"># same as not_interned, but value are interned strings</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interned_size</span> <span class="o">=</span> <span class="n">asizeof</span><span class="o">.</span><span class="n">asized</span><span class="p">(</span><span class="n">interned</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">()</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interned_size</span><span class="o">.</span><span class="n">format</span><span class="p">()</span>
+<span class="s2">&quot;{&#39;29&#39;: &#39;aaaaaaaaaaaaaaaaaaaaaaaaaaaaa&#39;....1&#39;: &#39;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&#39;} size=109104 flat=49248&quot;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">print</span><span class="p">(</span><span class="s1">&#39;{0} bytes&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">not_interned_size</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">interned_size</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+<span class="mi">71136</span> <span class="nb">bytes</span>
+</pre></div>
+<ul>
+<li><em>size</em> is the sum of flat size plus the sizes of any referents (in bytes), this is the real size of the object.</li>
+<li><em>flat</em> is the sum of the basic size of the object plus the item size times the number of allocated items (in bytes).</li>
+</ul>
+<p>As we can see, not interned string dict has a size of 180240 bytes and the interned one, 109104 bytes, so 69.46 kbytes were saved just using <code>sys.intern</code> in this example with 50 sentences repeated 20 times (note that the intern table will be bigger, because it now holds that 50 sentences but they aren't repeated). Not too much, but it was a small example to show Pympler.</p>
+<h3>Example: Reducing memory needs</h3>
+<p>For this example, I will use a .csv from Kaggle<sup class="footnote-ref" id="fnref-4"><a href="#fn-4" rel="footnote">4</a></sup>, this dataset has all baby names used in each state of USA since 1910 (total 147.5 MB)  to 2014, for example, Anna for years 1945 and 1946, was used 6 times at the State of Alaska each year:</p>
+<pre><code>Id, Name, Year, Gender, State, Count
+
+948,Anna,1945,F,AK,6
+1004,Anna,1946,F,AK,6
+</code></pre>
+<p>So, we can assume that there will be a lot of repeated strings, the same name every year for each state, the gender letter and the state code are strings too. Let's see if string interning is useful!</p>
+<p>Obviously, you will use something like Pandas to process this data but assume we are receiving this data (from a DB, for example) and need to write it to memory before doing anything else, we are going to focus only in reducing Virtual Memory (VM, memory allocated by the Python interpreter) and reducing the size of the list stored at Python heap, remember that memory no longer used and garbage-collected doesn't reduce VM size, the interpreter keep it to avoid asking for more memory again, so VM memory will increase or stay the same even some objects go out of scope.</p>
+<p>For this example I will use this three functions, <code>mem_summary()</code> will just show the memory status, <code>load_csv()</code> will load the csv already downloaded and will return a list of tuples with each row, <code>intern_csv()</code> will change some strings from the list to be interned so we can see the improvements:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">psutil</span>
+<span class="kn">from</span> <span class="nn">pympler</span> <span class="kn">import</span> <span class="n">summary</span><span class="p">,</span> <span class="n">muppy</span><span class="p">,</span> <span class="n">asizeof</span>
+
+
+<span class="k">def</span> <span class="nf">mem_summary</span><span class="p">():</span>
+    <span class="n">summary</span><span class="o">.</span><span class="n">print_</span><span class="p">(</span> <span class="n">summary</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">muppy</span><span class="o">.</span><span class="n">get_objects</span><span class="p">()),</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Virtual memory size:&#39;</span><span class="p">,</span> <span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">()</span><span class="o">.</span><span class="n">memory_info_ex</span><span class="p">()</span><span class="o">.</span><span class="n">vms</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="p">),</span> <span class="s1">&#39;MB&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">load_csv</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Load a csv to memory as list of tuples &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;StateNames.csv&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+        <span class="nb">next</span><span class="p">(</span><span class="n">csvfile</span><span class="p">)</span>
+        <span class="n">csvreader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvreader</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]))</span>
+
+
+<span class="k">def</span> <span class="nf">intern_csv</span><span class="p">(</span><span class="n">gen</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Given a list of tuples, apply string interning to some of its fields &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">gen</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span> <span class="n">sys</span><span class="o">.</span><span class="n">intern</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span> <span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+</pre></div>
+<h4>Without string interning</h4>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="n">mem_summary</span><span class="p">()</span>  <span class="c1"># initial memory summary and VM size</span>
+         <span class="n">types</span> <span class="o">|</span>   <span class="c1"># objects |   total size</span>
+<span class="o">==============</span> <span class="o">|</span> <span class="o">===========</span> <span class="o">|</span> <span class="o">============</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">dict</span> <span class="o">|</span>        <span class="mi">1747</span> <span class="o">|</span>      <span class="mf">1.32</span> <span class="n">MB</span>
+   <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">str</span> <span class="o">|</span>       <span class="mi">11288</span> <span class="o">|</span>      <span class="mf">1.30</span> <span class="n">MB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">type</span> <span class="o">|</span>         <span class="mi">512</span> <span class="o">|</span>    <span class="mf">504.47</span> <span class="n">KB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">code</span> <span class="o">|</span>        <span class="mi">3438</span> <span class="o">|</span>    <span class="mf">483.64</span> <span class="n">KB</span>
+   <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">set</span> <span class="o">|</span>         <span class="mi">370</span> <span class="o">|</span>    <span class="mf">141.44</span> <span class="n">KB</span>
+<span class="n">Virtual</span> <span class="n">memory</span> <span class="n">size</span><span class="p">:</span> <span class="mf">98.93359375</span> <span class="n">MB</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">loaded_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">load_csv</span><span class="p">())</span>  <span class="c1"># csv just loaded as list of tuples</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">mem_summary</span><span class="p">()</span>  <span class="c1"># after data is loaded, check memory again</span>
+         <span class="n">types</span> <span class="o">|</span>   <span class="c1"># objects |   total size</span>
+<span class="o">==============</span> <span class="o">|</span> <span class="o">===========</span> <span class="o">|</span> <span class="o">============</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">list</span> <span class="o">|</span>         <span class="mi">464</span> <span class="o">|</span>     <span class="mf">46.11</span> <span class="n">MB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">dict</span> <span class="o">|</span>        <span class="mi">1747</span> <span class="o">|</span>      <span class="mf">1.32</span> <span class="n">MB</span>
+   <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">str</span> <span class="o">|</span>       <span class="mi">11288</span> <span class="o">|</span>      <span class="mf">1.30</span> <span class="n">MB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">type</span> <span class="o">|</span>         <span class="mi">512</span> <span class="o">|</span>    <span class="mf">504.75</span> <span class="n">KB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">code</span> <span class="o">|</span>        <span class="mi">3438</span> <span class="o">|</span>    <span class="mf">483.64</span> <span class="n">KB</span>
+<span class="n">Virtual</span> <span class="n">memory</span> <span class="n">size</span><span class="p">:</span> <span class="mf">1667.3828125</span> <span class="n">MB</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Real list memory usage&#39;</span><span class="p">,</span> <span class="n">asizeof</span><span class="o">.</span><span class="n">asizeof</span><span class="p">(</span><span class="n">loaded_data</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="p">),</span> <span class="s1">&#39;MB&#39;</span><span class="p">)</span>
+<span class="n">Real</span> <span class="nb">list</span> <span class="n">memory</span> <span class="n">usage</span> <span class="mf">1522.7899169921875</span> <span class="n">MB</span>
+</pre></div>
+<p>With a fresh process, we already have <strong>98.93MB</strong> allocated by VM, after loading the csv, VM memory has increased to <strong>1.62GB</strong> and our list of tuples is using <strong>1.48GB</strong> (the 46.11MB show at summary table, is just the size of the list, without the tuples inside it).</p>
+<h4>With string interning</h4>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="n">mem_summary</span><span class="p">()</span>  <span class="c1"># initial memory summary and VM size</span>
+         <span class="n">types</span> <span class="o">|</span>   <span class="c1"># objects |   total size</span>
+<span class="o">==============</span> <span class="o">|</span> <span class="o">===========</span> <span class="o">|</span> <span class="o">============</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">dict</span> <span class="o">|</span>        <span class="mi">1747</span> <span class="o">|</span>      <span class="mf">1.32</span> <span class="n">MB</span>
+   <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">str</span> <span class="o">|</span>       <span class="mi">11288</span> <span class="o">|</span>      <span class="mf">1.30</span> <span class="n">MB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">type</span> <span class="o">|</span>         <span class="mi">512</span> <span class="o">|</span>    <span class="mf">504.47</span> <span class="n">KB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">code</span> <span class="o">|</span>        <span class="mi">3438</span> <span class="o">|</span>    <span class="mf">483.64</span> <span class="n">KB</span>
+   <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">set</span> <span class="o">|</span>         <span class="mi">370</span> <span class="o">|</span>    <span class="mf">141.44</span> <span class="n">KB</span>
+<span class="n">Virtual</span> <span class="n">memory</span> <span class="n">size</span><span class="p">:</span> <span class="mf">98.93359375</span> <span class="n">MB</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">loaded_data_interned</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">intern_csv</span><span class="p">(</span><span class="n">load_csv</span><span class="p">()))</span>  <span class="c1"># csv loaded as list of tuples with strings interned</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">mem_summary</span><span class="p">()</span>  <span class="c1"># after data is loaded, check memory again</span>
+         <span class="n">types</span> <span class="o">|</span>   <span class="c1"># objects |   total size</span>
+<span class="o">==============</span> <span class="o">|</span> <span class="o">===========</span> <span class="o">|</span> <span class="o">============</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">list</span> <span class="o">|</span>         <span class="mi">464</span> <span class="o">|</span>     <span class="mf">46.11</span> <span class="n">MB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">dict</span> <span class="o">|</span>        <span class="mi">1747</span> <span class="o">|</span>      <span class="mf">1.32</span> <span class="n">MB</span>
+   <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">str</span> <span class="o">|</span>       <span class="mi">11288</span> <span class="o">|</span>      <span class="mf">1.30</span> <span class="n">MB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">type</span> <span class="o">|</span>         <span class="mi">512</span> <span class="o">|</span>    <span class="mf">504.75</span> <span class="n">KB</span>
+  <span class="o">&lt;</span><span class="k">class</span> <span class="err">&#39;</span><span class="nc">code</span> <span class="o">|</span>        <span class="mi">3438</span> <span class="o">|</span>    <span class="mf">483.64</span> <span class="n">KB</span>
+<span class="n">Virtual</span> <span class="n">memory</span> <span class="n">size</span><span class="p">:</span> <span class="mf">1057.33984375</span> <span class="n">MB</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Real list memory usage&#39;</span><span class="p">,</span> <span class="n">asizeof</span><span class="o">.</span><span class="n">asizeof</span><span class="p">(</span><span class="n">loaded_data_interned</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="p">),</span> <span class="s1">&#39;MB&#39;</span><span class="p">)</span>
+<span class="n">Real</span> <span class="nb">list</span> <span class="n">memory</span> <span class="n">usage</span> <span class="mf">916.0488128662109</span> <span class="n">MB</span>
+</pre></div>
+<p>Again, we have the same amount initially allocated by VM, <strong>98.93MB</strong>, but now we see some improvements, after loading the dataset and interning the strings on it, VM allocated memory was reduced to <strong>1.03GB</strong> and the real size of the list is now <strong>0.89GB</strong>.</p>
+<p>In conclusion, with just using string interning, our needs of total memory allocated by the Python process are now 37% smaller where our needs for memory at Python heap to store the list was reduced by another 40%.</p>
+<h3>Conclusions</h3>
+<p>As show, this simple technique can help us to improve our code in two ways:</p>
+<ul>
+<li>Faster dictionary lookups (Python is using it internally for some data structures) and string operations.</li>
+<li>Reduce memory needs when working with a lot of repeated strings.</li>
+</ul>
+<div class="footnotes">
+<hr>
+<ol><li id="fn-1"><p><a href="https://en.wikipedia.org/wiki/String_interning">https://en.wikipedia.org/wiki/String_interning</a><a href="#fnref-1" rev="footnote">&#8617;</a></p></li>
+<li id="fn-2"><p><a href="https://docs.python.org/3.5/library/sys.html#sys.intern">https://docs.python.org/3.5/library/sys.html#sys.intern</a><a href="#fnref-2" rev="footnote">&#8617;</a></p></li>
+<li id="fn-3"><p><a href="https://pythonhosted.org/Pympler/">https://pythonhosted.org/Pympler/</a><a href="#fnref-3" rev="footnote">&#8617;</a></p></li>
+<li id="fn-4"><p><a href="https://www.kaggle.com/kaggle/us-baby-names">https://www.kaggle.com/kaggle/us-baby-names</a><a href="#fnref-4" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>
+
+  </div>
+
+  <div class="panel panel-default comments">
+      <div class="panel-body">
+          
+<div id="disqus_thread"></div>
+<script>
+  var disqus_config = function() { this.page.identifier = "/blog/performance-improving-memory-needs-and-dict-lookup-time-with-string-interning"; this.page.url = "http://www.corderomartinez.es/blog/performance-improving-memory-needs-and-dict-lookup-time-with-string-interning/"; };
+  (function() {
+    var d = document, s = d.createElement('script');
+    s.src = '//jneight-1.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>
+  Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript"
+    rel="nofollow">comments powered by Disqus.</a>
+</noscript>
+
+      </div>
+  </div>
+
+              </div>
+          </div>
+      </div>
+  </div>
+  <footer class="footer">
+     <hr />
+     <div class="container">
+        <ul class="list-inline text-muted pull-right">
+            <li>Contact me</li>
+            <li><a href="https://github.com/jneight" target="_blank"><i class="fa fa-github-alt fa-fw" aria-hidden="true"></i> GitHub</a></li>
+            <li>|</li>
+            <li><a href="https://www.linkedin.com/in/jcorderomartinez" target="_blank"><i class="fa fa-linkedin fa-fw" aria-hidden="true"></i> Linkedin</a></li>
+            <li>|</li>
+            <li><a href="https://twitter.com/jneight" target="_blank"><i class="fa fa-twitter fa-fw" aria-hidden="true"></i> Twitter</a></li>
+        </ul>
+        <ul class="list-inline text-muted">
+            <li>Built with</li>
+            <li><a href="https://www.getlektor.com/" target="_blank">Lektor</a></li>
+            <li>|</li>
+            <li><a href="https://getbootstrap.com/" target="_blank">Bootstrap</a></li>
+            <li>|</li>
+            <li><a href="https://bootswatch.com/readable/" target="_blank">Readable Bootswatch Theme</a></li>
+            <li>|</li>
+            <li><a href="http://fontawesome.io/" target="_blank">Font Awesome</a></li>
+        </ul>
+        <p><a class="feed" href="/feed.xml" title="Atom/RSS feed"><i class="fa fa-rss fa-fw"></i> Subscribe to Atom feed</a></p>
+     </div>
+  </footer>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</body>
